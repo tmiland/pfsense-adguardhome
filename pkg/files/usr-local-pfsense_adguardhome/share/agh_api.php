@@ -105,17 +105,27 @@ function agh_call($base, $path, $jar, $post = null) {
 	return is_array($j) ? $j : null;
 }
 
-/* AGH versions < 0.107 returned top lists as objects, newer return
-   [name, count] pairs - accept both shapes. */
+/* Top-list shapes across AGH versions:
+   - 0.107.x: [{"name": count}, {"name": count}, ...] (single-key objects)
+   - some versions: [["name", count], ...] pairs
+   - very old: {"name": count, ...} plain map */
 function agh_pairs($arr) {
 	if (!is_array($arr)) {
 		return array();
 	}
 	$out = array();
 	foreach ($arr as $k => $v) {
-		if (is_array($v) && count($v) >= 2) {
-			$out[$v[0]] = $v[1];
-		} elseif (is_string($k)) {
+		if (is_array($v)) {
+			if (count($v) >= 2 && isset($v[0]) && is_string($v[0]) && isset($v[1])) {
+				$out[$v[0]] = $v[1];
+			} else {
+				foreach ($v as $kk => $vv) {
+					if (is_string($kk) && is_numeric($vv)) {
+						$out[$kk] = $vv;
+					}
+				}
+			}
+		} elseif (is_string($k) && is_numeric($v)) {
 			$out[$k] = $v;
 		}
 	}
@@ -154,7 +164,12 @@ function agh_collect($qlog_limit = 0) {
 	$out['status'] = agh_call($set['base'], '/control/status', $jar);
 	$out['stats'] = agh_call($set['base'], '/control/stats', $jar);
 	if ($qlog_limit > 0) {
-		$out['qlog'] = agh_call($set['base'], '/control/querylog?limit=' . (int)$qlog_limit . '&response_status=all', $jar);
+		$q = agh_call($set['base'], '/control/querylog?limit=' . (int)$qlog_limit . '&response_status=all', $jar);
+		/* AGH 0.107 wraps the entries: {"data": [...], "oldest": "..."}. */
+		if (is_array($q) && isset($q['data']) && is_array($q['data'])) {
+			$q = $q['data'];
+		}
+		$out['qlog'] = is_array($q) ? $q : null;
 	}
 	@unlink($jar);
 	$out['api_state'] = ($out['stats'] !== null) ? 'ok' : 'failed';

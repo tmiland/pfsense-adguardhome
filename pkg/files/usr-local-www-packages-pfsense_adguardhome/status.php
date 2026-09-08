@@ -31,7 +31,23 @@ $agh_status = $agh['status'];
 $agh_stats = $agh['stats'];
 $agh_qlog = $agh['qlog'];
 
+/* Querylog reason labels. AGH 0.107 reports reason as a string; older
+   versions used small integers - map both. Blocked reasons start with
+   "Filtered". */
 $reason_labels = array(
+	'NotFilteredNotFound' => 'Allowed',
+	'NotFilteredWhiteList' => 'Allowed (whitelist)',
+	'NotFilteredBypassed' => 'Allowed (bypassed)',
+	'FilteredBlackList' => 'Blocked (blocklist)',
+	'FilteredSafeBrowsing' => 'Blocked (SafeBrowsing)',
+	'FilteredParental' => 'Blocked (Parental)',
+	'FilteredSafeSearch' => 'Blocked (SafeSearch)',
+	'FilteredInvalid' => 'Blocked (invalid)',
+	'FilteredBlockedService' => 'Blocked (service)',
+	'FilteredCustomized' => 'Blocked (custom)',
+	'Rewritten' => 'Rewrite',
+	'RewriteEtcHosts' => 'Rewrite (hosts)',
+	'RewriteDDR' => 'Rewrite (DDR)',
 	-1 => 'Allowed (whitelist)',
 	0 => 'Allowed',
 	1 => 'Blocked (blocklist)',
@@ -218,12 +234,12 @@ if ($api_state == 'unconfigured') {
 						</tr>
 					</thead>
 					<tbody>
-<?php $shown = 0; if (is_array($agh_qlog)): foreach (array_reverse($agh_qlog) as $e): $shown++; $reason = isset($e['reason']) ? (int)$e['reason'] : null; $is_blocked = ($reason !== null && $reason >= 1 && $reason <= 7); ?>
+<?php $shown = 0; if (is_array($agh_qlog)): foreach (array_reverse($agh_qlog) as $e): $shown++; $reason = isset($e['reason']) ? (string)$e['reason'] : ''; $is_blocked = (strpos($reason, 'Filtered') === 0); $domain = ''; if (isset($e['question']['name'])) { $domain = (string)$e['question']['name']; } elseif (isset($e['name'])) { $domain = (string)$e['name']; } ?>
 						<tr>
 							<td style="white-space: nowrap;" class="agh-muted"><?= htmlspecialchars(isset($e['time']) ? substr((string)$e['time'], 11, 8) : '') ?></td>
 							<td><?= htmlspecialchars(isset($e['client']) ? (string)$e['client'] : (isset($e['IP']) ? (string)$e['IP'] : '')) ?></td>
-							<td><?= htmlspecialchars(isset($e['name']) ? (string)$e['name'] : '') ?></td>
-							<td class="<?= $is_blocked ? 'agh-blocked' : '' ?>"><?= $reason !== null && isset($reason_labels[$reason]) ? gettext($reason_labels[$reason]) : (($reason === 0) ? gettext('Allowed') : '') ?></td>
+							<td><?= htmlspecialchars($domain) ?></td>
+							<td class="<?= $is_blocked ? 'agh-blocked' : '' ?>"><?= $reason !== '' ? (isset($reason_labels[$reason]) ? gettext($reason_labels[$reason]) : htmlspecialchars($reason)) : '' ?></td>
 							<td class="agh-muted"><?= htmlspecialchars(isset($e['status']) ? (string)$e['status'] : '') ?></td>
 						</tr>
 <?php endforeach; endif; if ($shown === 0): ?>
