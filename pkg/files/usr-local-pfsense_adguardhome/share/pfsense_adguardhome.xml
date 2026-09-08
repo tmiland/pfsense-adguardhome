@@ -2,7 +2,7 @@
 <!DOCTYPE packagegui SYSTEM "../schema/packages.dtd">
 <packagegui>
 	<name>pfsense_adguardhome</name>
-	<version>1.0.2</version>
+	<version>1.1.0</version>
 	<title>AdGuard Home DNS Filter</title>
 	<menu>
 		<name>AdGuard Home</name>

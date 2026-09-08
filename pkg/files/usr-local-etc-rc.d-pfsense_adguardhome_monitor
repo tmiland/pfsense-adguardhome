@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# pfsense_adguardhome_monitor rc.d service for pfSense (FreeBSD).
+# Installed by pfSense-pkg-adguardhome at
+# /usr/local/etc/rc.d/pfsense_adguardhome_monitor.
+# Package-owned: replaced on every package install/upgrade.
+#
+# PROVIDE: pfsense_adguardhome_monitor
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="pfsense_adguardhome_monitor"
+rcvar="${name}_enable"
+desc="AdGuard Home status monitor - pfSense notifications on service/protection changes"
+
+command="/usr/local/pfsense_adguardhome/sbin/pfsense_adguardhome_monitor.sh"
+: "${pfsense_adguardhome_monitor_interval:=300}"
+pidfile="/var/run/${name}.pid"
+logfile="/var/log/${name}.log"
+
+# daemon(8) runs with a minimal PATH; /usr/local/bin holds php on pfSense.
+PATH="/usr/local/bin:${PATH}"
+export PATH
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+status_cmd="${name}_status"
+
+# daemon(8) retitles itself and the pidfile can go stale across -r restarts,
+# so process liveness is checked with pgrep -f instead.
+pfsense_adguardhome_monitor_running() {
+	pgrep -f "/usr/local/pfsense_adguardhome/sbin/pfsense_adguardhome_monitor.sh" >/dev/null 2>&1
+}
+
+pfsense_adguardhome_monitor_start() {
+	if pfsense_adguardhome_monitor_running; then
+		echo "${name} already running (pid(s): $(pgrep -f "${command}" | tr '\n' ' '))."
+		return 0
+	fi
+	rm -f "$pidfile"
+	# -f detach, -r restart the loop if it dies
+	/usr/sbin/daemon -f -r -o "$logfile" -p "$pidfile" "$command" "${pfsense_adguardhome_monitor_interval}"
+	sleep 1
+	if ! pfsense_adguardhome_monitor_running; then
+		echo "Failed to start ${name}; see ${logfile}."
+		return 1
+	fi
+	echo "Started ${name}."
+}
+
+pfsense_adguardhome_monitor_stop() {
+	if pfsense_adguardhome_monitor_running; then
+		echo "Stopping ${name}..."
+		pkill -TERM -f "/usr/local/pfsense_adguardhome/sbin/pfsense_adguardhome_monitor.sh" 2>/dev/null
+		for _ in 1 2 3 4 5; do
+			pfsense_adguardhome_monitor_running || break
+			sleep 1
+		done
+		pfsense_adguardhome_monitor_running && pkill -KILL -f "/usr/local/pfsense_adguardhome/sbin/pfsense_adguardhome_monitor.sh" 2>/dev/null
+		echo "Stopped ${name}."
+	else
+		echo "${name} is not running."
+	fi
+	rm -f "$pidfile"
+	return 0
+}
+
+pfsense_adguardhome_monitor_status() {
+	pids=$(pgrep -f "/usr/local/pfsense_adguardhome/sbin/pfsense_adguardhome_monitor.sh" 2>/dev/null)
+	if [ -n "$pids" ]; then
+		echo "${name} is running as pid(s): $(echo "$pids" | tr '\n' ' ')"
+		return 0
+	fi
+	echo "${name} is not running."
+	return 1
+}
+
+load_rc_config "${name}"
+: "${pfsense_adguardhome_monitor_enable:="NO"}"
+
+run_rc_command "$1"

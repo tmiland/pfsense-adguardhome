@@ -14,124 +14,22 @@ require_once("service-utils.inc");
 $pgtitle = array(gettext("Services"), gettext("AdGuard Home"), gettext("Status"));
 include("head.inc");
 
-$settings = config_get_path('installedpackages/pfsense_adguardhome/settings', []);
-$api_user = isset($settings['api_user']) ? $settings['api_user'] : '';
-$api_pass = isset($settings['api_pass']) ? $settings['api_pass'] : '';
-$querylog_limit = (isset($settings['querylog_limit']) && ctype_digit((string)$settings['querylog_limit'])) ? (int)$settings['querylog_limit'] : 25;
-$api_base = isset($settings['api_url']) ? trim($settings['api_url']) : '';
-if ($api_base === '') {
-	$host = isset($_SERVER['SERVER_ADDR']) ? $_SERVER['SERVER_ADDR'] : '127.0.0.1';
-	$api_base = "http://{$host}:8088";
-}
-$api_base = rtrim($api_base, '/');
+require_once("/usr/local/pfsense_adguardhome/share/agh_api.php");
 
-$running = is_service_running('AdGuardHome');
+$set = agh_settings();
+$api_base = $set['base'];
+$querylog_limit = $set['qlog_limit'];
 
-/* Running AdGuard Home version - needs no API credentials. */
-$v_running = '';
-if (@is_executable('/opt/AdGuardHome/AdGuardHome')) {
-	exec("/opt/AdGuardHome/AdGuardHome --version 2>/dev/null", $vout);
-	if (!empty($vout) && preg_match('/version\s+v?([0-9][0-9a-zA-Z.\-]*)/i', $vout[0], $vm)) {
-		$v_running = $vm[1];
-	}
-}
-
-/* Latest upstream release, cached for an hour so page loads stay snappy. */
-$latest = '';
-$latest_file = '/tmp/pfsense_adguardhome_latest.json';
-if (file_exists($latest_file)) {
-	$c = json_decode(@file_get_contents($latest_file), true);
-	if (is_array($c) && isset($c['tag'], $c['ts']) && (time() - (int)$c['ts']) < 3600) {
-		$latest = $c['tag'];
-	}
-}
-if ($latest === '') {
-	$ch = curl_init('https://api.github.com/repos/AdguardTeam/AdGuardHome/releases/latest');
-	curl_setopt_array($ch, array(
-		CURLOPT_RETURNTRANSFER => true,
-		CURLOPT_TIMEOUT => 5,
-		CURLOPT_CONNECTTIMEOUT => 3,
-		CURLOPT_USERAGENT => 'pfsense-pkg-adguardhome'
-	));
-	$b = curl_exec($ch);
-	curl_close($ch);
-	$j = is_string($b) ? json_decode($b, true) : null;
-	if (is_array($j) && isset($j['tag_name'])) {
-		$latest = ltrim($j['tag_name'], 'v');
-		@file_put_contents($latest_file, json_encode(array('tag' => $latest, 'ts' => time())));
-	}
-}
-
-/* AdGuard Home local API (read-only). Login once per request, reuse the
-   session cookie for the data calls, never store credentials anywhere. */
-function agh_call($base, $path, $jar, $post = null) {
-	$ch = curl_init($base . $path);
-	curl_setopt_array($ch, array(
-		CURLOPT_RETURNTRANSFER => true,
-		CURLOPT_TIMEOUT => 5,
-		CURLOPT_CONNECTTIMEOUT => 3,
-		CURLOPT_COOKIEJAR => $jar,
-		CURLOPT_COOKIEFILE => $jar,
-		CURLOPT_HTTPHEADER => array('Content-Type: application/json')
-	));
-	if ($post !== null) {
-		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post));
-	}
-	$body = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-	curl_close($ch);
-	if ($code != 200 || !is_string($body)) {
-		return null;
-	}
-	if ($post !== null) {
-		/* Login: AGH answers 200 with a small plain body ("OK"), not JSON.
-		   Only the HTTP status matters - the session lives in the cookie jar. */
-		return array();
-	}
-	$j = json_decode($body, true);
-	return is_array($j) ? $j : null;
-}
-
-$api_state = 'unconfigured';
-$agh_status = null;
-$agh_stats = null;
-$agh_qlog = null;
-
-if ($running) {
-	if ($api_user === '' || $api_pass === '') {
-		$api_state = 'unconfigured';
-	} else {
-		$jar = tempnam('/tmp', 'aghck');
-		$login = agh_call($api_base, '/control/login', $jar, array('name' => $api_user, 'password' => $api_pass));
-		if ($login === null) {
-			$api_state = 'failed';
-		} else {
-			$agh_status = agh_call($api_base, '/control/status', $jar);
-			$agh_stats = agh_call($api_base, '/control/stats', $jar);
-			$agh_qlog = agh_call($api_base, "/control/querylog?limit={$querylog_limit}&response_status=all", $jar);
-			$api_state = ($agh_stats !== null) ? 'ok' : 'failed';
-		}
-		@unlink($jar);
-	}
-}
-
-/* AGH versions < 0.107 returned top lists as objects, newer return
-   [name, count] pairs - accept both shapes. */
-function agh_pairs($arr) {
-	if (!is_array($arr)) {
-		return array();
-	}
-	$out = array();
-	foreach ($arr as $k => $v) {
-		if (is_array($v) && count($v) >= 2) {
-			$out[$v[0]] = $v[1];
-		} elseif (is_string($k)) {
-			$out[$k] = $v;
-		}
-	}
-	return $out;
-}
+/* Read-only gather: service state, versions, stats, querylog. */
+$agh = agh_collect($querylog_limit);
+$running = $agh['running'];
+$v_running = $agh['v_running'];
+$latest = $agh['latest'];
+$update = $agh['update'];
+$api_state = $agh['api_state'];
+$agh_status = $agh['status'];
+$agh_stats = $agh['stats'];
+$agh_qlog = $agh['qlog'];
 
 $reason_labels = array(
 	-1 => 'Allowed (whitelist)',

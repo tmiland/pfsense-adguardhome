@@ -15,7 +15,8 @@ mkdir -p "$STAGE" "$META" "$OUT"
 
 PBASE="usr/local/pfsense_adguardhome"
 WBASE="usr/local/www/packages/pfsense_adguardhome"
-mkdir -p "$STAGE/$PBASE/sbin" "$STAGE/$PBASE/share" "$STAGE/$WBASE"
+mkdir -p "$STAGE/$PBASE/sbin" "$STAGE/$PBASE/share" "$STAGE/$WBASE" \
+	"$STAGE/usr/local/www/widgets/widgets" "$STAGE/usr/local/www/widgets/include"
 
 install -m 0755 "$PKGDIR/files/usr-local-pfsense_adguardhome/sbin/setup.sh" \
 	"$STAGE/$PBASE/sbin/setup.sh"
@@ -23,6 +24,18 @@ install -m 0644 "$PKGDIR/files/usr-local-pfsense_adguardhome/share/pfsense_adgua
 	"$STAGE/$PBASE/share/pfsense_adguardhome.xml"
 install -m 0644 "$PKGDIR/files/usr-local-etc-rc.d-AdGuardHome" \
 	"$STAGE/$PBASE/share/AdGuardHome.rcd"
+install -m 0644 "$PKGDIR/files/usr-local-etc-rc.d-pfsense_adguardhome_monitor" \
+	"$STAGE/$PBASE/share/pfsense_adguardhome_monitor.rcd"
+install -m 0644 "$PKGDIR/files/usr-local-pfsense_adguardhome/share/agh_api.php" \
+	"$STAGE/$PBASE/share/agh_api.php"
+install -m 0755 "$PKGDIR/files/usr-local-pfsense_adguardhome/sbin/pfsense_adguardhome_monitor.sh" \
+	"$STAGE/$PBASE/sbin/pfsense_adguardhome_monitor.sh"
+install -m 0755 "$PKGDIR/files/usr-local-pfsense_adguardhome/sbin/agh_monitor.php" \
+	"$STAGE/$PBASE/sbin/agh_monitor.php"
+install -m 0644 "$PKGDIR/files/usr-local-www-widgets-widgets-adguardhome.widget.php" \
+	"$STAGE/usr/local/www/widgets/widgets/adguardhome.widget.php"
+install -m 0644 "$PKGDIR/files/usr-local-www-widgets-include-widget-adguardhome.inc" \
+	"$STAGE/usr/local/www/widgets/include/widget-adguardhome.inc"
 install -m 0644 "$PKGDIR/files/usr-local-pfsense_adguardhome/share/AdGuardHome_freebsd_amd64.tar.gz" \
 	"$STAGE/$PBASE/share/AdGuardHome_freebsd_amd64.tar.gz"
 install -m 0644 "$PKGDIR/files/usr-local-pfsense_adguardhome/share/AdGuardHome_freebsd_amd64.tar.gz.sha256" \
@@ -35,6 +48,11 @@ done
 for page in "$STAGE/$WBASE"/*.php; do
 	php -l "$page" >/dev/null
 done
+php -l "$STAGE/$PBASE/share/agh_api.php" >/dev/null
+php -l "$STAGE/$PBASE/sbin/agh_monitor.php" >/dev/null
+php -l "$STAGE/usr/local/www/widgets/widgets/adguardhome.widget.php" >/dev/null
+sh -n "$STAGE/$PBASE/sbin/pfsense_adguardhome_monitor.sh"
+sh -n "$STAGE/$PBASE/share/pfsense_adguardhome_monitor.rcd"
 
 VERSION=$(sed -n 's/.*<version>\([^<]*\)<.*/\1/p' "$STAGE/$PBASE/share/pfsense_adguardhome.xml" | head -1)
 ABI=$(pkg config abi)
@@ -70,7 +88,10 @@ foreach (array(
     "usr/local/pfsense_adguardhome",
     "usr/local/pfsense_adguardhome/sbin",
     "usr/local/pfsense_adguardhome/share",
-    "usr/local/www/packages/pfsense_adguardhome"
+    "usr/local/www/packages/pfsense_adguardhome",
+    "usr/local/www/widgets",
+    "usr/local/www/widgets/widgets",
+    "usr/local/www/widgets/include"
 ) as $d) {
     $dirs["/" . $d] = "y";
 }

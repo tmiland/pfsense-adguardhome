@@ -18,7 +18,8 @@ $fields = array(
 	'api_url' => array('AdGuard Home API URL', 'text', 'Base URL of the AdGuard Home web UI/API, e.g. http://192.168.1.1:8088. Leave empty to use the firewall LAN address on port 8088. Note: if AdGuard Home only binds the LAN IP, a localhost URL will not work.'),
 	'api_user' => array('API username', 'text', 'AdGuard Home administrator username. Used only to read statistics for the Status page - the package never changes AdGuard Home settings.'),
 	'api_pass' => array('API password', 'secret', 'AdGuard Home administrator password. Stored in the pfSense config (masked, never echoed back). Leave blank to keep the stored value.'),
-	'querylog_limit' => array('Query log lines', 'number', 'How many recent query-log entries to show on the Status page.')
+	'querylog_limit' => array('Query log lines', 'number', 'How many recent query-log entries to show on the Status page.'),
+	'notifications' => array('pfSense notifications', 'select', 'Send a pfSense notification (System > Advanced > Notifications channels) when the AdGuard Home service is not running or protection is disabled. Checked every 5 minutes by the package monitor service; one reminder per hour while a problem persists.')
 );
 
 $vals = array();
@@ -29,6 +30,9 @@ foreach ($fields as $key => $f) {
 if ($vals['querylog_limit'] === '') {
 	$vals['querylog_limit'] = '25';
 }
+if ($vals['notifications'] === '') {
+	$vals['notifications'] = 'yes';
+}
 
 $input_errors = array();
 $saved = false;
@@ -38,6 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 	foreach ($fields as $key => $f) {
 		$val = trim($_POST[$key] ?? '');
 		$val = str_replace(array("\r", "\n", "\0"), '', $val);
+		if ($f[1] == 'select') {
+			if ($val === '' || !in_array($val, array('yes', 'no'))) {
+				$val = 'yes';
+			}
+		}
 		if ($f[1] == 'number' && $val !== '' && !ctype_digit($val)) {
 			$input_errors[] = sprintf(gettext('%s must be a number.'), $f[0]);
 		}
@@ -105,6 +114,11 @@ if (!empty($input_errors)) {
 							<td>
 <?php if ($f[1] == 'secret'): ?>
 								<input class="form-control" type="password" name="<?= htmlspecialchars($key) ?>" value="" autocomplete="new-password" placeholder="<?= ($vals[$key] !== '') ? gettext('(stored - leave blank to keep)') : gettext('(not set)') ?>" />
+<?php elseif ($f[1] == 'select'): ?>
+								<select class="form-control" name="<?= htmlspecialchars($key) ?>">
+									<option value="yes" <?= ($vals[$key] == 'yes') ? 'selected' : '' ?>><?= gettext('yes') ?></option>
+									<option value="no" <?= ($vals[$key] != 'yes') ? 'selected' : '' ?>><?= gettext('no') ?></option>
+								</select>
 <?php else: ?>
 								<input class="form-control" type="text" name="<?= htmlspecialchars($key) ?>" value="<?= htmlspecialchars($vals[$key]) ?>" autocomplete="off" />
 <?php endif ?>

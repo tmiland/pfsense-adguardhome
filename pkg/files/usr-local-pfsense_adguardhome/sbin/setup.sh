@@ -18,6 +18,8 @@ AGH_DIR="/opt/AdGuardHome"
 AGH_BIN="${AGH_DIR}/AdGuardHome"
 RCD="/usr/local/etc/rc.d/AdGuardHome"
 RCD_SRC="${PKG_BASE}/share/AdGuardHome.rcd"
+MON_RCD="/usr/local/etc/rc.d/pfsense_adguardhome_monitor"
+MON_RCD_SRC="${PKG_BASE}/share/pfsense_adguardhome_monitor.rcd"
 
 fresh_install() {
 	echo "pfSense-pkg-adguardhome: no existing install in /opt, installing bundled AdGuard Home..."
@@ -40,6 +42,12 @@ ensure_rcd() {
 	fi
 }
 
+install_monitor_rcd() {
+	# Package-owned status monitor script: always (re)installed on
+	# install/upgrade so upgrades take effect.
+	install -m 0755 "$MON_RCD_SRC" "$MON_RCD"
+}
+
 register_config() {
 	php <<'PHP'
 <?php
@@ -60,18 +68,27 @@ $menu = array(
     'section' => 'Services',
     'url' => '/packages/pfsense_adguardhome/status.php'
 );
+$svc2 = array(
+    'name' => 'pfsense_adguardhome_monitor',
+    'rcfile' => 'pfsense_adguardhome_monitor',
+    'description' => 'AdGuard Home status monitor',
+    'custom_php_service_status_command' =>
+        'exec("/usr/bin/pgrep -f pfsense_adguardhome_monitor.sh", $o); $rc = (count($o) > 0);'
+);
 
 $services = config_get_path('installedpackages/service', []);
-$found = false;
-foreach ($services as $k => $s) {
-    if (isset($s['name']) && $s['name'] == $svc['name']) {
-        $services[$k] = $svc;
-        $found = true;
-        break;
+foreach (array($svc, $svc2) as $svc_item) {
+    $found = false;
+    foreach ($services as $k => $s) {
+        if (isset($s['name']) && $s['name'] == $svc_item['name']) {
+            $services[$k] = $svc_item;
+            $found = true;
+            break;
+        }
     }
-}
-if (!$found) {
-    $services[] = $svc;
+    if (!$found) {
+        $services[] = $svc_item;
+    }
 }
 config_set_path('installedpackages/service', $services);
 
@@ -103,7 +120,7 @@ $config = parse_config(true);
 $services = config_get_path('installedpackages/service', []);
 $out = array();
 foreach ($services as $s) {
-    if (isset($s['name']) && $s['name'] == 'AdGuardHome') {
+    if (isset($s['name']) && in_array($s['name'], array('AdGuardHome', 'pfsense_adguardhome_monitor'))) {
         continue;
     }
     $out[] = $s;
@@ -139,11 +156,21 @@ install)
 	if ! /usr/sbin/service AdGuardHome onestatus >/dev/null 2>&1; then
 		/usr/sbin/service AdGuardHome onestart >/dev/null 2>&1
 	fi
+	# Status monitor: package-owned rc.d script, enabled + started when
+	# not already running. This service is ours to start/stop freely.
+	install_monitor_rcd
+	/usr/sbin/sysrc pfsense_adguardhome_monitor_enable=YES >/dev/null 2>&1
+	if ! /usr/sbin/service pfsense_adguardhome_monitor onestatus >/dev/null 2>&1; then
+		/usr/sbin/service pfsense_adguardhome_monitor onestart >/dev/null 2>&1
+	fi
 	echo "pfSense-pkg-adguardhome: install complete. AdGuard Home config lives in its own web UI."
 	;;
 deinstall)
-	# Unregister the pfSense menu/service entries only. AdGuard Home itself,
-	# its config and its rc.d script stay in place and keep running.
+	# Stop + disable the package-owned status monitor, then unregister the
+	# pfSense menu/service entries. AdGuard Home itself, its config and its
+	# rc.d script stay in place and keep running.
+	/usr/local/etc/rc.d/pfsense_adguardhome_monitor stop >/dev/null 2>&1
+	/usr/sbin/sysrc -x pfsense_adguardhome_monitor_enable >/dev/null 2>&1
 	unregister_config
 	echo "pfSense-pkg-adguardhome: package removed; /opt/AdGuardHome and the AdGuardHome rc.d service were left untouched."
 	;;

@@ -39,6 +39,16 @@ This package is a **management wrapper, not a config manager**:
   - top queried domains, top blocked domains, top clients,
   - recent query-log tail with blocked entries highlighted,
   - 60s auto-refresh.
+- **Dashboard widget**: an "AdGuard Home" tile for the pfSense dashboard
+  (Status → Dashboard → add widget) — service state, version, 24h
+  queries/blocked/avg response, protection state, update notice, and links
+  to the status page and the AdGuard Home UI.
+- **Status monitor with pfSense notifications**: a small supervised service
+  (`pfsense_adguardhome_monitor`, checked every 5 minutes) that alerts via
+  the pfSense notification channels (System → Advanced → Notifications,
+  e.g. email/Telegram) when the AdGuard Home service is not running or
+  protection is disabled — with hourly reminders and a recovery notice when
+  the problem clears. Toggle it off in the package Settings page.
 - **Settings page**: AdGuard Home API URL + read-only API credentials
   (masked, stored in config.xml) and query-log line count.
 - **Theme-safe UI**: works in light, dark, and `prefers-color-scheme`
