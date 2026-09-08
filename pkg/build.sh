@@ -21,7 +21,7 @@ install -m 0755 "$PKGDIR/files/usr-local-pfsense_adguardhome/sbin/setup.sh" \
 	"$STAGE/$PBASE/sbin/setup.sh"
 install -m 0644 "$PKGDIR/files/usr-local-pfsense_adguardhome/share/pfsense_adguardhome.xml" \
 	"$STAGE/$PBASE/share/pfsense_adguardhome.xml"
-install -m 0644 "$PKGDIR/files/usr-local-pfsense_adguardhome/share/AdGuardHome.rcd" \
+install -m 0644 "$PKGDIR/files/usr-local-etc-rc.d-AdGuardHome" \
 	"$STAGE/$PBASE/share/AdGuardHome.rcd"
 install -m 0644 "$PKGDIR/files/usr-local-pfsense_adguardhome/share/AdGuardHome_freebsd_amd64.tar.gz" \
 	"$STAGE/$PBASE/share/AdGuardHome_freebsd_amd64.tar.gz"
