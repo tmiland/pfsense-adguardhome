@@ -11,6 +11,9 @@
 require_once("guiconfig.inc");
 require_once("service-utils.inc");
 
+$pgtitle = array(gettext("Services"), gettext("AdGuard Home"), gettext("Status"));
+include("head.inc");
+
 $settings = config_get_path('installedpackages/pfsense_adguardhome/settings', []);
 $api_user = isset($settings['api_user']) ? $settings['api_user'] : '';
 $api_pass = isset($settings['api_pass']) ? $settings['api_pass'] : '';
