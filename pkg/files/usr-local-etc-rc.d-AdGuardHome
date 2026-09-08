@@ -1,0 +1,15 @@
+#!/bin/sh
+# PROVIDE: AdGuardHome
+# REQUIRE: networking
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="AdGuardHome"
+AdGuardHome_env="IS_DAEMON=1"
+AdGuardHome_user="root"
+pidfile_child="/var/run/${name}.pid"
+pidfile="/var/run/${name}_daemon.pid"
+command="/usr/sbin/daemon"
+command_args="-P ${pidfile} -p ${pidfile_child} -T ${name} -r /opt/AdGuardHome/AdGuardHome"
+run_rc_command "$1"

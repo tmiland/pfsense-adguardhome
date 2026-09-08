@@ -1,0 +1,4 @@
+* text=auto
+*.tar.gz binary
+*.sig binary
+*.pkg binary
