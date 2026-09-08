@@ -104,9 +104,13 @@ if (!$running) {
 		sprintf(gettext('Start it from %1$sStatus > Services%2$s or with %3$sservice AdGuardHome start%4$s.'),
 			'<a href="status_services.php">', '</a>', '<code>', '</code>'), 'warning');
 } else {
-	print_info_box(sprintf(gettext('AdGuard Home is running (version %1$s). Manage DNS filtering in its own web UI: %2$s'),
+	print_info_box(sprintf(gettext('AdGuard Home is running (version %1$s).%2$s Manage DNS filtering in its own web UI: %3$s'),
 		$v_running !== '' ? $v_running : gettext('unknown'),
+		$protection === true ? ' ' . gettext('Protection is enabled.') : '',
 		'<a href="' . htmlspecialchars($api_base) . '" target="_blank">' . htmlspecialchars($api_base) . '</a>'), 'success');
+	if ($protection === false) {
+		print_info_box(gettext('DNS protection is DISABLED - queries are not being filtered! Enable it in AdGuard Home\'s own web UI.'), 'warning');
+	}
 }
 
 if ($update) {
@@ -159,11 +163,6 @@ if ($api_state == 'unconfigured') {
 					</div>
 				</div>
 			</div>
-<?php if ($protection !== null): ?>
-			<p class="<?= $protection ? '' : 'agh-blocked' ?>">
-				<?= $protection ? gettext('Protection is enabled.') : gettext('Protection is DISABLED - queries are not being filtered.') ?>
-			</p>
-<?php endif ?>
 		</div>
 	</div>
 
