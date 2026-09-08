@@ -84,6 +84,11 @@ function agh_call($base, $path, $jar, $post = null) {
 	if ($code != 200 || !is_string($body)) {
 		return null;
 	}
+	if ($post !== null) {
+		/* Login: AGH answers 200 with a small plain body ("OK"), not JSON.
+		   Only the HTTP status matters - the session lives in the cookie jar. */
+		return array();
+	}
 	$j = json_decode($body, true);
 	return is_array($j) ? $j : null;
 }
