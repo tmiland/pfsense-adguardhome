@@ -2,9 +2,10 @@
 /*
  * adguardhome.widget.php
  *
- * pfSense dashboard widget for the AdGuard Home package. Shows the service
- * state, running version, filtering statistics and protection state.
- * Read-only: AdGuard Home is never modified from here.
+ * Dashboard widget for the AdGuard Home package: service state, version,
+ * 24h filtering stats and protection state, linking into the package
+ * Status page and the AdGuard Home web UI. Same look as the
+ * pfSense-pkg-abuseipdb dashboard widget.
  */
 $nocsrf = true;
 
@@ -21,21 +22,17 @@ $avg = (is_array($stats) && isset($stats['avg_processing_time'])) ? (float)$stat
 $pct = ($queries !== null && $queries > 0 && $blocked !== null) ? round($blocked * 100 / $queries, 1) : null;
 $protection = (is_array($agh['status']) && isset($agh['status']['protection_enabled'])) ? (bool)$agh['status']['protection_enabled'] : null;
 ?>
-<style>
-	tr.agh-w-muted td {
-		opacity: 0.75;
-	}
-	td.agh-w-bad {
-		font-weight: 700;
-	}
-</style>
 <div class="content">
-	<table class="table table-striped table-hover table-condensed">
+	<table class="table table-striped table-hover">
 		<tbody>
 			<tr>
 				<td><?= gettext('Service') ?></td>
-				<td class="<?= $agh['running'] ? '' : 'agh-w-bad' ?>">
-					<?= $agh['running'] ? sprintf(gettext('Running (%1$s)'), $agh['v_running'] !== '' ? $agh['v_running'] : gettext('unknown')) : gettext('NOT RUNNING') ?>
+				<td>
+<?php if ($agh['running']): ?>
+					<span class="text-success"><i class="fa-solid fa-circle-check"></i> <?= sprintf(gettext('running (%1$s)'), $agh['v_running'] !== '' ? $agh['v_running'] : gettext('unknown')) ?></span>
+<?php else: ?>
+					<span class="text-danger"><i class="fa-solid fa-circle-xmark"></i> <?= gettext('not running') ?></span>
+<?php endif ?>
 				</td>
 			</tr>
 <?php if ($queries !== null): ?>
@@ -52,28 +49,33 @@ $protection = (is_array($agh['status']) && isset($agh['status']['protection_enab
 				<td><?= $avg !== null ? htmlspecialchars(round($avg, 2)) . ' ms' : '-' ?></td>
 			</tr>
 <?php else: ?>
-			<tr class="agh-w-muted">
-				<td colspan="2"><?= $agh['api_state'] == 'unconfigured' ? gettext('Statistics need API credentials - open the package Settings page.') : gettext('No statistics available.') ?></td>
+			<tr>
+				<td><?= gettext('Statistics') ?></td>
+				<td><?= $agh['api_state'] == 'unconfigured' ? gettext('needs credentials - open Settings') : gettext('not available') ?></td>
 			</tr>
 <?php endif ?>
 <?php if ($protection !== null): ?>
 			<tr>
 				<td><?= gettext('Protection') ?></td>
-				<td class="<?= $protection ? '' : 'agh-w-bad' ?>"><?= $protection ? gettext('Enabled') : gettext('DISABLED') ?></td>
+				<td>
+<?php if ($protection): ?>
+					<span class="text-success"><?= gettext('enabled') ?></span>
+<?php else: ?>
+					<span class="text-danger"><i class="fa-solid fa-circle-xmark"></i> <?= gettext('DISABLED') ?></span>
+<?php endif ?>
+				</td>
 			</tr>
 <?php endif ?>
 <?php if ($agh['update']): ?>
 			<tr>
 				<td><?= gettext('Update') ?></td>
-				<td class="agh-w-bad"><?= sprintf(gettext('%1$s available (running %2$s)'), $agh['latest'], $agh['v_running']) ?></td>
+				<td><span class="text-warning"><?= sprintf(gettext('%1$s available (running %2$s)'), $agh['latest'], $agh['v_running']) ?></span></td>
 			</tr>
 <?php endif ?>
-			<tr class="agh-w-muted">
-				<td colspan="2">
-					<a href="/packages/pfsense_adguardhome/status.php"><?= gettext('Status page') ?></a>
-					&middot; <a href="<?= htmlspecialchars($set['base']) ?>" target="_blank"><?= gettext('AdGuard Home UI') ?></a>
-				</td>
-			</tr>
 		</tbody>
 	</table>
+	<div class="text-right" style="padding-bottom: 5px;">
+		<a href="/packages/pfsense_adguardhome/status.php"><?= gettext('Open AdGuard Home status') ?> <i class="fa-solid fa-arrow-right"></i></a>
+		&middot; <a href="<?= htmlspecialchars($set['base']) ?>" target="_blank"><?= gettext('web UI') ?></a>
+	</div>
 </div>

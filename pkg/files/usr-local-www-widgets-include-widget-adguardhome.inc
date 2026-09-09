@@ -1,6 +1,14 @@
 <?php
-/* Widget registration for the pfSense dashboard:
-   index.php includes every widgets/include/*.inc before building the
-   "Available Widgets" list and reads $<basename>_title from them. */
-$adguardhome_title = "AdGuard Home";
-$adguardhome_title_link = "packages/pfsense_adguardhome/status.php";
+/*
+ * widget-adguardhome.inc
+ *
+ * Dashboard widget registration for the AdGuard Home package.
+ * index.php includes this file and reads $adguardhome_title /
+ * $adguardhome_title_link (variable name derived from the widget basename).
+ */
+
+//set variable for custom title
+$adguardhome_title = gettext("AdGuard Home");
+$adguardhome_title_link = "/packages/pfsense_adguardhome/status.php";
+
+?>
