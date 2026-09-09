@@ -9,6 +9,8 @@ and a native Status/Settings UI under **Services → AdGuard Home**.
 
 ![AdGuard Home status page](docs/screenshots/status.png)
 
+
+**Full write-up on the blog:** https://tmiland.com/pfsense-adguardhome/
 ## Design: adopt-first
 
 This package is a **management wrapper, not a config manager**:
