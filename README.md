@@ -123,3 +123,9 @@ Produces `/tmp/pfsense-adguardhome-repo-out/` — a flat pkg(8) repo layout
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+Built with [opencode](https://opencode.ai/go?ref=00KNXXSB00) — the open-source
+AI coding agent for the terminal. Grab your own at
+[opencode.ai/go](https://opencode.ai/go?ref=00KNXXSB00).
