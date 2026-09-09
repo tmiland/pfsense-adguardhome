@@ -3,9 +3,11 @@
 AdGuard Home manager package for pfSense: auto-install, service integration,
 and a native Status/Settings UI under **Services → AdGuard Home**.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)]()
+[![Version](https://img.shields.io/badge/version-1.1.2-blue)]()
 [![Platform](https://img.shields.io/badge/platform-pfSense%202.8%20%2F%20FreeBSD-orange)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)]()
+
+![AdGuard Home status page](docs/screenshots/status.png)
 
 ## Design: adopt-first
 
