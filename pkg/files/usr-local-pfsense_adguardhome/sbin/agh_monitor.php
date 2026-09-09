@@ -39,9 +39,10 @@ if (!is_array($state)) {
 $set = agh_settings();
 if ($set['notifications'] !== 'yes') {
 	/* Monitoring off: clear bad-state memory so re-enabling starts clean. */
-	if (!empty($state['bad_service']) || !empty($state['bad_protection'])) {
+	if (!empty($state['bad_service']) || !empty($state['bad_protection']) || !empty($state['bad_dns'])) {
 		$state['bad_service'] = false;
 		$state['bad_protection'] = false;
+		$state['bad_dns'] = false;
 		@file_put_contents($state_file, json_encode($state));
 	}
 	exit(0);
@@ -62,7 +63,21 @@ if ($agh['running'] && $protection === false) {
 	$alerts['protection'] = 'AdGuard Home DNS protection is DISABLED - queries are not being filtered!';
 }
 
-foreach (array('service', 'protection') as $type) {
+/* End-to-end DNS probe: a fresh random name must traverse the full chain
+   (AGH -> unbound -> dnscrypt -> upstream). Any answer (even NXDOMAIN or a
+   blocked result) proves the chain; a timeout means LAN DNS is effectively
+   dead even when the service itself is running (boot-time upstream race). */
+if ($agh['running']) {
+	$lanip = config_get_path('interfaces/lan/ipaddr');
+	if ($lanip) {
+		exec('/usr/local/bin/dig +time=3 +tries=1 +short probe-' . getmypid() . '-' . time() . '.example.com @' . escapeshellarg($lanip) . ' 2>/dev/null', $po, $prc);
+		if ($prc !== 0) {
+			$alerts['dns'] = "DNS resolution through AdGuard Home ({$lanip}:53) is FAILING - the resolver chain is not answering new queries!";
+		}
+	}
+}
+
+foreach (array('service', 'protection', 'dns') as $type) {
 	$bad = isset($alerts[$type]);
 	$was = !empty($state['bad_' . $type]);
 	if ($bad) {
@@ -75,7 +90,12 @@ foreach (array('service', 'protection') as $type) {
 		}
 		$state['bad_' . $type] = true;
 	} elseif ($was) {
-		aghmon_notify($type == 'service' ? 'AdGuard Home service is running again.' : 'AdGuard Home DNS protection is enabled again.');
+		$labels = array(
+			'service' => 'AdGuard Home service is running again.',
+			'protection' => 'AdGuard Home DNS protection is enabled again.',
+			'dns' => 'DNS resolution through AdGuard Home is answering again.'
+		);
+		aghmon_notify($labels[$type]);
 		$state['bad_' . $type] = false;
 	}
 }
